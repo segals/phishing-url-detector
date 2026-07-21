@@ -1,0 +1,11 @@
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+ucimlrepo          # fetch PhiUSIIL from the UCI repository
+shap               # feature-attribution explanations for the tree model
+jupyter            # run the notebook
+# optional:
+# xgboost          # gradient-boosting comparison
+# python-pptx      # rebuild the slide deck

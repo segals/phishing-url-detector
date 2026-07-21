@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+
+# raw data is fetched by scripts/fetch_data.py (kept out of git; large + redistributable)
+data/raw/*.csv
+data/processed/
+
+# scratch
+scripts/_*.py
