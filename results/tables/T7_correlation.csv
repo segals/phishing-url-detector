@@ -1,0 +1,16 @@
+feature,pearson,spearman
+n_slash,0.478,0.671
+n_path_segments,0.497,0.671
+path_len,0.168,0.669
+is_https,-0.613,-0.613
+n_digit,0.164,0.542
+digit_ratio,0.433,0.538
+url_len,0.222,0.38
+n_hyphen,0.188,0.368
+url_entropy,0.395,0.358
+host_hyphen,0.305,0.318
+letter_ratio,-0.351,-0.293
+host_entropy,0.276,0.282
+suspicious_tld,0.236,0.236
+host_len,0.283,0.213
+n_cue_words,0.18,0.192

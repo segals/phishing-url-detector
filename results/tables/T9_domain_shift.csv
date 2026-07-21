@@ -1,0 +1,16 @@
+feature,ks_statistic,wasserstein_norm
+is_https,0.741,1.789
+path_len,0.694,0.931
+n_path_segments,0.627,1.915
+n_subdomain,0.435,0.968
+url_len,0.343,0.434
+n_slash,0.309,1.06
+letter_ratio,0.294,0.446
+n_dots,0.28,0.559
+n_upper,0.266,121.761
+host_len,0.26,0.432
+url_entropy,0.257,0.598
+digit_ratio,0.25,0.447
+n_digit,0.25,0.238
+n_hyphen,0.153,0.534
+host_entropy,0.146,0.294

@@ -1,0 +1,7 @@
+feature_group,n_features,f1,auc
+length/counts,8,0.993,0.998
+host/domain,5,0.687,0.823
+tld,2,0.266,0.574
+entropy,3,0.806,0.928
+scheme/encoding,4,0.696,0.767
+brand/cue,5,0.273,0.582

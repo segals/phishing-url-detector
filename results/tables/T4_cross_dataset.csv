@@ -1,6 +1,6 @@
 setting,f1,recall_phishing,auc,threshold
 in-distribution (PhiUSIIL test),0.997,0.994,0.999,0.5
 "cross-dataset (Kaggle, full model)",0.666,0.999,0.434,0.5
-"cross-dataset (Kaggle, no is_https)",0.666,0.998,0.166,0.5
+"cross-dataset (Kaggle, no is_https)",0.666,0.998,0.168,0.5
 "cross-dataset (Kaggle, re-thresholded)",0.667,1.0,0.434,0.01
 live OpenPhish (recall only),,1.0,,0.5

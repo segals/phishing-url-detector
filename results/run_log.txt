@@ -1,0 +1,32 @@
+Phase 1: where the near-perfect score comes from
+  T0: 1.0 (all) / 0.9953 (1 feature) / 0.9967 (honest lexical)
+  T2 best model: random_forest
+Phase 2: deeper EDA -- distribution shape, correlation, non-parametric tests
+Phase 3: the URL-obfuscation arms race
+  HTTPS artifact: legit 1.00 vs phishing 0.49
+          attack  recall_attacked  recall_+normalize  recall_+debias(no https)
+         (clean)            0.994              0.994                     0.994
+       homoglyph            0.992              0.994                     0.994
+       typosquat            0.993              0.993                     0.994
+   https_upgrade            0.672              0.672                     0.704
+homepage_mimicry            0.000              0.000                     0.000
+Phase 4: does the score survive a DIFFERENT, mixed-class dataset?
+  in-dist F1 0.997 -> cross-dataset F1 0.666 (AUC 0.434); live OpenPhish recall 1.000
+                               setting    f1  recall_phishing   auc  threshold
+       in-distribution (PhiUSIIL test) 0.997            0.994 0.999       0.50
+    cross-dataset (Kaggle, full model) 0.666            0.999 0.434       0.50
+   cross-dataset (Kaggle, no is_https) 0.666            0.998 0.168       0.50
+cross-dataset (Kaggle, re-thresholded) 0.667            1.000 0.434       0.01
+          live OpenPhish (recall only)   NaN            1.000   NaN       0.50
+Phase 5: what is the model actually using? (SHAP)
+  top drivers: ['is_https', 'n_path_segments', 'path_len', 'n_slash', 'n_digit', 'url_len']
+Phase 6: measuring the domain shift with KS + Wasserstein (course: distance metrics)
+  most-shifted features (KS): ['is_https', 'path_len', 'n_path_segments', 'n_subdomain', 'url_len']
+Phase 7: unsupervised anomaly detection (Isolation Forest, LOF)
+  unsupervised AUC: {'IsolationForest': 0.828, 'LocalOutlierFactor': 0.944}
+Phase 8: probability calibration (Brier + reliability curve)
+  Brier 0.0025
+Phase 9: feature-group ablation
+Phase 10: error analysis
+  false positives 15, false negatives 119 of 47074
+done in 795s

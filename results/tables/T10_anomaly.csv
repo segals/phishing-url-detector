@@ -1,0 +1,3 @@
+unsupervised_detector,auc
+IsolationForest,0.828
+LocalOutlierFactor,0.944

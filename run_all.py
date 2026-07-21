@@ -250,11 +250,147 @@ def phase5(df, F, tr, te):
     fig.tight_layout(); fig.savefig(config.FIGURES / "F5_shap.png"); plt.close(fig)
 
 
+# ----------------------------------------- Phase 2: deeper EDA (course statistics)
+def phase2_eda(df, F, tr):
+    print("Phase 2: deeper EDA -- distribution shape, correlation, non-parametric tests")
+    from scipy import stats as ss
+    feat = features.FEATURE_NAMES
+    Ftr = X(F, tr, feat); y = tr["label"].values
+
+    # distribution shape (skewness/kurtosis) -> many URL features are heavy-tailed,
+    # which is WHY we prefer Spearman/median over Pearson/mean (course: robust statistics)
+    shape = [[c, round(float(ss.skew(Ftr[c])), 2), round(float(ss.kurtosis(Ftr[c])), 2)]
+             for c in ["url_len", "host_len", "digit_ratio", "host_entropy", "n_cue_words", "n_subdomain"]]
+    pd.DataFrame(shape, columns=["feature", "skewness", "excess_kurtosis"]).to_csv(config.TABLES / "T6_eda_shape.csv", index=False)
+
+    # Pearson (linear) vs Spearman (monotone) correlation with the label
+    corr = [[c, round(float(ss.pearsonr(Ftr[c], y)[0]), 3), round(float(ss.spearmanr(Ftr[c], y).correlation), 3)] for c in feat]
+    Cc = pd.DataFrame(corr, columns=["feature", "pearson", "spearman"])
+    Cc["abs_s"] = Cc["spearman"].abs()
+    Cc.sort_values("abs_s", ascending=False).drop(columns="abs_s").head(15).to_csv(config.TABLES / "T7_correlation.csv", index=False)
+
+    # Mann-Whitney U (non-parametric, since features are skewed): do the classes differ?
+    mw = []
+    for c in ["url_len", "host_entropy", "digit_ratio", "n_cue_words", "is_https"]:
+        _, p = ss.mannwhitneyu(Ftr[c][y == 1], Ftr[c][y == 0], alternative="two-sided")
+        mw.append([c, f"{p:.1e}", round(float(Ftr[c][y == 1].median()), 3), round(float(Ftr[c][y == 0].median()), 3)])
+    pd.DataFrame(mw, columns=["feature", "mannwhitney_p", "median_phishing", "median_legit"]).to_csv(config.TABLES / "T8_mannwhitney.csv", index=False)
+
+    top = Cc.sort_values("abs_s", ascending=False).head(12)["feature"].tolist()
+    M = Ftr[top].corr(method="spearman")
+    fig, ax = plt.subplots(figsize=(7, 6)); im = ax.imshow(M, cmap="coolwarm", vmin=-1, vmax=1)
+    ax.set_xticks(range(len(top))); ax.set_xticklabels(top, rotation=90, fontsize=7)
+    ax.set_yticks(range(len(top))); ax.set_yticklabels(top, fontsize=7)
+    fig.colorbar(im, fraction=0.046); ax.set_title("Spearman correlation (top features)")
+    fig.tight_layout(); fig.savefig(config.FIGURES / "F6_correlation.png"); plt.close(fig)
+
+
+# ------------------------------ Phase 6: quantify the domain shift (distance metrics)
+def phase6_shift(df, F):
+    print("Phase 6: measuring the domain shift with KS + Wasserstein (course: distance metrics)")
+    from scipy import stats as ss
+    feat = features.FEATURE_NAMES
+    A = F[feat]
+    B = pd.read_csv(config.DATA_PROC / "kaggle_features.csv")[feat]
+    rows = []
+    for c in feat:
+        ks = ss.ks_2samp(A[c], B[c]).statistic
+        w = ss.wasserstein_distance(A[c], B[c]) / (A[c].std() or 1.0)
+        rows.append([c, round(float(ks), 3), round(float(w), 3)])
+    T = pd.DataFrame(rows, columns=["feature", "ks_statistic", "wasserstein_norm"]).sort_values("ks_statistic", ascending=False)
+    T.head(15).to_csv(config.TABLES / "T9_domain_shift.csv", index=False)
+    print("  most-shifted features (KS):", T.head(5)["feature"].tolist())
+    fig, ax = plt.subplots(figsize=(7.5, 4.5))
+    T.head(12).set_index("feature")["ks_statistic"][::-1].plot.barh(ax=ax, color=RED)
+    ax.set_title("Distribution shift PhiUSIIL -> Kaggle (KS)"); ax.set_xlabel("KS statistic")
+    fig.tight_layout(); fig.savefig(config.FIGURES / "F7_domain_shift.png"); plt.close(fig)
+
+
+# --------------------------- Phase 7: unsupervised abnormality detection (course topic)
+def phase7_anomaly(df, F, tr, te):
+    print("Phase 7: unsupervised anomaly detection (Isolation Forest, LOF)")
+    from sklearn.ensemble import IsolationForest
+    from sklearn.neighbors import LocalOutlierFactor
+    from sklearn.metrics import roc_auc_score
+    feat = features.FEATURE_NAMES
+    Xte = X(F, te, feat); yte = te["label"].values
+    legit = X(F, tr, feat)[tr["label"].values == 0]
+    rows = []
+    iso = IsolationForest(n_estimators=200, random_state=config.SEED).fit(legit)
+    rows.append(["IsolationForest", round(roc_auc_score(yte, -iso.score_samples(Xte)), 3)])
+    lof = LocalOutlierFactor(n_neighbors=20, novelty=True).fit(legit.sample(min(15000, len(legit)), random_state=0))
+    rows.append(["LocalOutlierFactor", round(roc_auc_score(yte, -lof.score_samples(Xte)), 3)])
+    pd.DataFrame(rows, columns=["unsupervised_detector", "auc"]).to_csv(config.TABLES / "T10_anomaly.csv", index=False)
+    print("  unsupervised AUC:", dict(rows))
+
+
+# ----------------------------------------------- Phase 8: calibration (goodness of fit)
+def phase8_calibration(df, F, tr, te):
+    print("Phase 8: probability calibration (Brier + reliability curve)")
+    from sklearn.metrics import brier_score_loss
+    from sklearn.calibration import calibration_curve
+    feat = features.FEATURE_NAMES
+    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), tr["label"].values)
+    p = mdl.predict_proba(X(F, te, feat))[:, 1]; y = te["label"].values
+    brier = brier_score_loss(y, p)
+    frac, mean_pred = calibration_curve(y, p, n_bins=10)
+    pd.DataFrame({"mean_predicted": mean_pred.round(3), "observed_freq": frac.round(3)}).to_csv(config.TABLES / "T11_calibration.csv", index=False)
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    ax.plot([0, 1], [0, 1], "--", color="grey"); ax.plot(mean_pred, frac, "o-", color=INK)
+    ax.set_xlabel("mean predicted P(phishing)"); ax.set_ylabel("observed frequency")
+    ax.set_title(f"Reliability curve (Brier {brier:.4f})")
+    fig.tight_layout(); fig.savefig(config.FIGURES / "F8_calibration.png"); plt.close(fig)
+    print(f"  Brier {brier:.4f}")
+
+
+# ------------------------------------------------- Phase 9: feature-group ablation
+def phase9_ablation(df, F, tr, te):
+    print("Phase 9: feature-group ablation")
+    feat = features.FEATURE_NAMES; ytr = tr["label"].values; yte = te["label"].values
+    groups = {
+        "length/counts": ["url_len", "host_len", "path_len", "n_dots", "n_hyphen", "n_slash", "n_digit", "digit_ratio"],
+        "host/domain": ["n_subdomain", "host_hyphen", "is_ip", "has_port", "core_len"],
+        "tld": ["tld_len", "suspicious_tld"],
+        "entropy": ["url_entropy", "host_entropy", "core_entropy"],
+        "scheme/encoding": ["is_https", "has_punycode", "has_at_symbol", "has_hex_encoding"],
+        "brand/cue": ["brand_min_dist", "brand_lookalike", "brand_in_subdomain", "is_shortener", "n_cue_words"],
+    }
+    rows = []
+    for name, cols in groups.items():
+        cols = [c for c in cols if c in feat]
+        _, p = models.fit_predict(models.model_zoo()["hist_gbm"], X(F, tr, cols), ytr, X(F, te, cols))
+        m = stats.metrics(yte, p)
+        rows.append([name, len(cols), round(m["f1"], 3), round(m["auc"], 3)])
+    pd.DataFrame(rows, columns=["feature_group", "n_features", "f1", "auc"]).to_csv(config.TABLES / "T12_ablation.csv", index=False)
+
+
+# --------------------------------------------------------- Phase 10: error analysis
+def phase10_error(df, F, tr, te):
+    print("Phase 10: error analysis")
+    feat = features.FEATURE_NAMES
+    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), tr["label"].values)
+    p = mdl.predict_proba(X(F, te, feat))[:, 1]
+    R = pd.DataFrame({"URL": te["URL"].values, "y": te["label"].values, "p": p})
+    R["pred"] = (R["p"] >= .5).astype(int)
+    fp = R[(R.pred == 1) & (R.y == 0)]; fn = R[(R.pred == 0) & (R.y == 1)]
+    pd.DataFrame([["false_positive", len(fp)], ["false_negative", len(fn)], ["test_size", len(R)]],
+                 columns=["item", "count"]).to_csv(config.TABLES / "T13_error_counts.csv", index=False)
+    pd.concat([fp.head(5).assign(type="FP"), fn.head(5).assign(type="FN")])[["type", "URL", "y", "p"]].round(3).to_csv(
+        config.TABLES / "T13b_error_examples.csv", index=False)
+    print(f"  false positives {len(fp)}, false negatives {len(fn)} of {len(R)}")
+
+
 if __name__ == "__main__":
     t0 = time.time()
     df, F, provided, tr, va, te = prepare()
     phase1(df, F, provided, tr, va, te)
+    phase2_eda(df, F, tr)
     phase3(df, F, tr, te)
-    phase4(df, F, tr, te)
+    phase4(df, F, tr, te)                 # also caches Kaggle features for phase 6
     phase5(df, F, tr, te)
+    phase6_shift(df, F)
+    phase7_anomaly(df, F, tr, te)
+    phase8_calibration(df, F, tr, te)
+    phase9_ablation(df, F, tr, te)
+    phase10_error(df, F, tr, te)
     print(f"done in {time.time()-t0:.0f}s")
