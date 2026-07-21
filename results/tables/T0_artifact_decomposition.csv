@@ -1,0 +1,6 @@
+representation,f1,auc,f1_95ci
+all 50 provided features (RF),1.0,1.0,"[1.000, 1.000]"
+single provided feature: URLSimilarityIndex,0.9953,0.9957,
+single provided feature: URLCharProb,0.6205,0.7661,
+single provided feature: TLDLegitimateProb,0.0,0.6074,
+"honest raw-URL lexical (40, RF)",0.9967,0.9988,"[0.996, 0.997]"

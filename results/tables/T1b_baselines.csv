@@ -1,0 +1,4 @@
+baseline,accuracy,recall,f1,mcc
+majority class (predict legit),0.5729,0.0,0.0,0.0
+rule: not https -> phishing,0.7932,0.5157,0.6805,0.6155
+rule: has cue word -> phishing,0.6015,0.0721,0.1339,0.1885
