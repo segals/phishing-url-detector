@@ -183,44 +183,71 @@ def phase3(df, F, tr, te):
     fig.savefig(config.FIGURES / "F3_arms_race.png"); plt.close(fig)
 
 
-# --------------------------------------- Phase 4: cross-dataset generalization (live data)
+# --------------------------------- Phase 4: cross-dataset generalization (independent source)
 def phase4(df, F, tr, te):
-    print("Phase 4: does the score survive a different, live dataset?")
+    print("Phase 4: does the score survive a DIFFERENT, mixed-class dataset?")
     feat = features.FEATURE_NAMES
-    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), tr["label"].values)
+    feat_db = [c for c in feat if c != "is_https"]
+    ytr = tr["label"].values
+    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), ytr)
+    mdl_db = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat_db), ytr)
+    m_id = stats.metrics(te["label"].values, mdl.predict_proba(X(F, te, feat))[:, 1])
 
-    # in-distribution reference
-    p_id = mdl.predict_proba(X(F, te, feat))[:, 1]
-    m_id = stats.metrics(te["label"].values, p_id)
+    # OOD: Kaggle Malicious-URLs (independent source), phishing vs benign, balanced sample
+    k = pd.read_csv(config.DATA_RAW / "malicious_urls" / "malicious_phish.csv")
+    k = k[k["type"].isin(["phishing", "benign"])].copy()
+    k["label"] = (k["type"] == "phishing").astype(int)
+    k = k.groupby("label", group_keys=False).sample(n=40000, random_state=config.SEED)
+    cache = config.DATA_PROC / "kaggle_features.csv"
+    if cache.exists():
+        Fk = pd.read_csv(cache)
+    else:
+        Fk = features.extract_frame(k["url"]); Fk["label"] = k["label"].values
+        Fk.to_csv(cache, index=False)
+    yk = Fk["label"].values
+    p_ood = mdl.predict_proba(Fk[feat])[:, 1]
+    p_ood_db = mdl_db.predict_proba(Fk[feat_db])[:, 1]
+    m_ood, m_ood_db = stats.metrics(yk, p_ood), stats.metrics(yk, p_ood_db)
+    best_t, _ = stats.cost_optimal_threshold(yk, p_ood, 1, 1)
+    m_ood_rt = stats.metrics(yk, p_ood, best_t)
 
-    # out-of-distribution: live OpenPhish phishing + Majestic legit (different collection)
+    # live modern phishing (OpenPhish), recall only
     oph = pd.read_csv(config.DATA_RAW / "openphish.csv")
-    maj = pd.read_csv(config.DATA_RAW / "majestic_top.csv").sample(2 * len(oph), random_state=config.SEED)
-    ood = pd.concat([oph, maj], ignore_index=True)
-    Food = features.extract_frame(ood["URL"])[feat]
-    p_ood = mdl.predict_proba(Food)[:, 1]
-    y_ood = ood["label"].values
-    m_ood = stats.metrics(y_ood, p_ood)
-    rec_openphish = float((p_ood[y_ood == 1] >= 0.5).mean())
-
-    # diagnosis: is it ranking (AUC) or just the threshold?
-    best_t, _ = stats.cost_optimal_threshold(y_ood, p_ood, 1, 1)
-    m_ood_rethr = stats.metrics(y_ood, p_ood, best_t)
+    rec_oph = float((mdl.predict_proba(features.extract_frame(oph["URL"])[feat])[:, 1] >= .5).mean())
 
     T4 = pd.DataFrame([
-        ["in-distribution (PhiUSIIL test)", round(m_id["f1"], 3), round(m_id["recall"], 3), round(m_id["auc"], 3), 0.5],
-        ["out-of-distribution (OpenPhish+Majestic)", round(m_ood["f1"], 3), round(rec_openphish, 3), round(m_ood["auc"], 3), 0.5],
-        ["  same, re-thresholded", round(m_ood_rethr["f1"], 3), round(m_ood_rethr["recall"], 3), round(m_ood["auc"], 3), round(best_t, 2)],
-    ], columns=["setting", "f1", "recall_phishing", "auc", "threshold"])
+        ["in-distribution (PhiUSIIL test)", m_id["f1"], m_id["recall"], m_id["auc"], 0.5],
+        ["cross-dataset (Kaggle, full model)", m_ood["f1"], m_ood["recall"], m_ood["auc"], 0.5],
+        ["cross-dataset (Kaggle, no is_https)", m_ood_db["f1"], m_ood_db["recall"], m_ood_db["auc"], 0.5],
+        ["cross-dataset (Kaggle, re-thresholded)", m_ood_rt["f1"], m_ood_rt["recall"], m_ood["auc"], round(best_t, 2)],
+        ["live OpenPhish (recall only)", float("nan"), rec_oph, float("nan"), 0.5],
+    ], columns=["setting", "f1", "recall_phishing", "auc", "threshold"]).round(3)
     T4.to_csv(config.TABLES / "T4_cross_dataset.csv", index=False)
-    print(f"  recall on live OpenPhish phishing: {rec_openphish:.3f}  (in-dist recall {m_id['recall']:.3f})")
+    print(f"  in-dist F1 {m_id['f1']:.3f} -> cross-dataset F1 {m_ood['f1']:.3f} (AUC {m_ood['auc']:.3f}); live OpenPhish recall {rec_oph:.3f}")
     print(T4.to_string(index=False))
 
     fig, ax = plt.subplots(figsize=(7.5, 4))
-    ax.hist(p_ood[y_ood == 1], bins=30, alpha=.6, color=RED, label="live phishing (OpenPhish)")
-    ax.hist(p_ood[y_ood == 0], bins=30, alpha=.6, color=GREEN, label="legit (Majestic)")
-    ax.axvline(0.5, ls="--", color="grey"); ax.set_xlabel("P(phishing)"); ax.set_title("Score distribution on live modern data")
-    ax.legend(); fig.tight_layout(); fig.savefig(config.FIGURES / "F4_cross_dataset.png"); plt.close(fig)
+    ax.hist(p_ood[yk == 1], bins=30, alpha=.6, color=RED, label="phishing (Kaggle)")
+    ax.hist(p_ood[yk == 0], bins=30, alpha=.6, color=GREEN, label="benign (Kaggle)")
+    ax.axvline(0.5, ls="--", color="grey"); ax.set_xlabel("P(phishing) from the PhiUSIIL-trained model")
+    ax.set_title("Cross-dataset: scores on an independent source"); ax.legend()
+    fig.tight_layout(); fig.savefig(config.FIGURES / "F4_cross_dataset.png"); plt.close(fig)
+
+
+# ------------------------------------------------- Phase 5: explainability (SHAP)
+def phase5(df, F, tr, te):
+    print("Phase 5: what is the model actually using? (SHAP)")
+    from src import explain
+    feat = features.FEATURE_NAMES
+    rf = models.model_zoo()["random_forest"].fit(X(F, tr, feat), tr["label"].values)
+    imp, _, _ = explain.shap_importance(rf, X(F, te, feat), max_n=2000)
+    imp.head(15).to_frame("mean_abs_shap").to_csv(config.TABLES / "T5_shap_importance.csv")
+    print("  top drivers:", list(imp.head(6).index))
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    imp.head(15)[::-1].plot.barh(ax=ax, color=INK)
+    ax.set_title("SHAP global importance (honest URL features)"); ax.set_xlabel("mean |SHAP|")
+    fig.tight_layout(); fig.savefig(config.FIGURES / "F5_shap.png"); plt.close(fig)
 
 
 if __name__ == "__main__":
@@ -229,4 +256,5 @@ if __name__ == "__main__":
     phase1(df, F, provided, tr, va, te)
     phase3(df, F, tr, te)
     phase4(df, F, tr, te)
+    phase5(df, F, tr, te)
     print(f"done in {time.time()-t0:.0f}s")

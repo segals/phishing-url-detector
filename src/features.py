@@ -75,9 +75,13 @@ def _brand_min_distance(host: str) -> int:
 def extract(url: str) -> dict:
     """Extract all URL string features. Returns a flat dict of numbers."""
     url = str(url).strip()
-    parsed = urlparse(url if "//" in url else "http://" + url)
-    host = (parsed.hostname or "").lower()
-    path, query = parsed.path or "", parsed.query or ""
+    try:                                    # some corpora contain malformed URLs
+        parsed = urlparse(url if "//" in url else "http://" + url)
+        host = (parsed.hostname or "").lower()
+        path, query = parsed.path or "", parsed.query or ""
+        scheme, port = parsed.scheme, parsed.port
+    except ValueError:
+        host, path, query, scheme, port = "", "", "", "", None
     labels = [l for l in host.split(".") if l]
     tld = labels[-1] if labels else ""
     core = labels[-2] if len(labels) >= 2 else ""
@@ -106,7 +110,7 @@ def extract(url: str) -> dict:
         "n_subdomain": max(0, len(labels) - 2),
         "host_hyphen": host.count("-"),
         "is_ip": int(bool(_IP_RE.match(host)) or bool(_HEX_IP_RE.match(host))),
-        "has_port": int(parsed.port is not None),
+        "has_port": int(port is not None),
         "core_len": len(core),
         # --- TLD ---
         "tld_len": len(tld),
@@ -121,7 +125,7 @@ def extract(url: str) -> dict:
         "host_entropy": _entropy(host),
         "core_entropy": _entropy(core),
         # --- scheme / encoding tricks ---
-        "is_https": int(parsed.scheme == "https"),
+        "is_https": int(scheme == "https"),
         "has_punycode": int("xn--" in host),
         "has_at_symbol": int("@" in url),
         "has_hex_encoding": int(bool(re.search(r"%[0-9a-fA-F]{2}", url))),

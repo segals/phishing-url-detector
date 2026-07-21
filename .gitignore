@@ -4,8 +4,8 @@ __pycache__/
 .DS_Store
 .venv/
 
-# raw data is fetched by scripts/fetch_data.py (kept out of git; large + redistributable)
-data/raw/*.csv
+# raw + processed data are fetched/derived by the scripts (kept out of git; large)
+data/raw/
 data/processed/
 
 # scratch
