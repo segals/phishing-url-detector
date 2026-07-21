@@ -191,7 +191,8 @@ def phase4(df, F, tr, te):
     ytr = tr["label"].values
     mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), ytr)
     mdl_db = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat_db), ytr)
-    m_id = stats.metrics(te["label"].values, mdl.predict_proba(X(F, te, feat))[:, 1])
+    p_id = mdl.predict_proba(X(F, te, feat))[:, 1]
+    m_id = stats.metrics(te["label"].values, p_id)
 
     # OOD: Kaggle Malicious-URLs (independent source), phishing vs benign, balanced sample
     k = pd.read_csv(config.DATA_RAW / "malicious_urls" / "malicious_phish.csv")
@@ -205,6 +206,7 @@ def phase4(df, F, tr, te):
         Fk = features.extract_frame(k["url"]); Fk["label"] = k["label"].values
         Fk.to_csv(cache, index=False)
     yk = Fk["label"].values
+    y_id_arr = te["label"].values   # for the before/after boxplot below
     p_ood = mdl.predict_proba(Fk[feat])[:, 1]
     p_ood_db = mdl_db.predict_proba(Fk[feat_db])[:, 1]
     m_ood, m_ood_db = stats.metrics(yk, p_ood), stats.metrics(yk, p_ood_db)
@@ -226,11 +228,20 @@ def phase4(df, F, tr, te):
     print(f"  in-dist F1 {m_id['f1']:.3f} -> cross-dataset F1 {m_ood['f1']:.3f} (AUC {m_ood['auc']:.3f}); live OpenPhish recall {rec_oph:.3f}")
     print(T4.to_string(index=False))
 
-    fig, ax = plt.subplots(figsize=(7.5, 4))
-    ax.hist(p_ood[yk == 1], bins=30, alpha=.6, color=RED, label="phishing (Kaggle)")
-    ax.hist(p_ood[yk == 0], bins=30, alpha=.6, color=GREEN, label="benign (Kaggle)")
-    ax.axvline(0.5, ls="--", color="grey"); ax.set_xlabel("P(phishing) from the PhiUSIIL-trained model")
-    ax.set_title("Cross-dataset: scores on an independent source"); ax.legend()
+    # Unambiguous before/after: boxplots of the score distribution, split by TRUE class,
+    # for in-distribution (separated) vs cross-dataset (collapsed). A histogram at this
+    # level of saturation (both classes piled at ~1.0) is visually ambiguous; a boxplot
+    # is not.
+    groups = [p_id[y_id_arr == 0], p_id[y_id_arr == 1], p_ood[yk == 0], p_ood[yk == 1]]
+    labels = ["legit\n(in-dist.)", "phishing\n(in-dist.)", "legit\n(Kaggle)", "phishing\n(Kaggle)"]
+    fig, ax = plt.subplots(figsize=(7.5, 4.3))
+    bp = ax.boxplot(groups, tick_labels=labels, patch_artist=True, showfliers=False, widths=0.55)
+    for patch, clr in zip(bp["boxes"], [GREEN, RED, GREEN, RED]):
+        patch.set_facecolor(clr); patch.set_alpha(0.75)
+    ax.axhline(0.5, ls="--", color="grey", lw=1)
+    ax.set_ylabel("P(phishing) from the PhiUSIIL-trained model"); ax.set_ylim(-0.03, 1.03)
+    ax.set_title("In-distribution the classes separate; on Kaggle both collapse to ~1.0")
+    ax.axvline(2.5, color="grey", lw=0.8, ls=":")
     fig.tight_layout(); fig.savefig(config.FIGURES / "F4_cross_dataset.png"); plt.close(fig)
 
 

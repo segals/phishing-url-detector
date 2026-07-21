@@ -45,14 +45,14 @@ python scripts/fetch_kaggle.py      # Kaggle (needs a Kaggle token at ~/.kaggle/
 python scripts/fetch_modern.py      # OpenPhish + Majestic
 python run_all.py                   # regenerates every table + figure (seed 42, deterministic)
 python scripts/build_nb.py          # notebook   (optional)
-python scripts/build_report.py      # blog PDF   (optional)
+python scripts/build_report.py      # submission report PDF (optional)
 python scripts/build_slides.py      # slides     (optional)
 ```
 
 ## Deliverables
 
 - **`notebooks/url_detector.ipynb`** — the end-to-end story with code, tables, figures, interpretation.
-- **`report/blog.pdf`** — the write-up, blog style.
+- **`report/report.pdf`** — the formal submission report (~10 pages: abstract, numbered sections, figures/tables with captions, references).
 - **`presentation/url_detector.pptx`** — the ~20-minute talk.
 
 ## Layout

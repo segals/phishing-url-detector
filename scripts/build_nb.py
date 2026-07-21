@@ -202,9 +202,12 @@ does the score survive a **different** dataset? I test on the independent **Kagg
 c.append(code('display(T("T4_cross_dataset")); F("F4_cross_dataset")'))
 c.append(md(r"""
 The near-perfect model (in-dist F1 0.997, AUC 0.999) collapses to **F1 0.67 / AUC 0.43 — worse than
-random**: its ranking *inverts*, because PhiUSIIL's "legit = home-page / phishing = deep-link" artifact is
-reversed in another dataset. Yet it still catches **100% of live OpenPhish phishing**, because today's
-real phishing is *still* structurally messy.
+random**. The boxplot shows why: in-distribution the two classes are cleanly separated (legit near 0,
+phishing near 1), but on the Kaggle set **both classes collapse to the same saturated region near 1.0**
+(mean score 1.000 for benign, 0.999 for phishing — the model isn't just less confident, it can no longer
+tell the classes apart at all). AUC < 0.5 means that within that saturated band, benign URLs score
+*fractionally higher* than phishing on average — a true inversion, not just noise. Yet it still catches
+**100% of live OpenPhish phishing**, because today's real phishing is *still* structurally messy.
 
 *Why* does it invert? Distance metrics make it concrete — the most-shifted features between the two
 datasets are exactly the ones the model relies on:
