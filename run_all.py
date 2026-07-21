@@ -139,8 +139,94 @@ def _figures(df, F, tr, te):
     fig.tight_layout(); fig.savefig(config.FIGURES / "F2_feature_importance.png"); plt.close(fig)
 
 
+# ----------------------------------------------- Phase 3: URL-obfuscation arms race
+def phase3(df, F, tr, te):
+    print("Phase 3: the URL-obfuscation arms race")
+    from src import attacks, normalize
+    feat = features.FEATURE_NAMES
+    feat_db = [c for c in feat if c != "is_https"]      # de-biased: drop the https crutch
+    ytr = tr["label"].values
+
+    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), ytr)
+    mdl_db = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat_db), ytr)
+
+    # T3a: the dominant collection artifact -- HTTPS rate by class
+    hr = df.groupby("label")["URL"].apply(lambda s: s.str.startswith("https").mean())
+    pd.DataFrame({"class": ["legitimate", "phishing"],
+                  "https_rate": [round(hr[0], 3), round(hr[1], 3)]}
+                 ).to_csv(config.TABLES / "T3a_https_artifact.csv", index=False)
+
+    ph = te.loc[te["label"] == 1, "URL"].tolist()       # attacker perturbs phishing
+
+    def recall(urls, model, cols):
+        Fx = features.extract_frame(urls)[cols]
+        return float((model.predict_proba(Fx)[:, 1] >= 0.5).mean())
+
+    clean = recall(ph, mdl, feat)
+    rows = [["(clean)", round(clean, 3), round(clean, 3), round(recall(ph, mdl_db, feat_db), 3)]]
+    for k in ["homoglyph", "typosquat", "https_upgrade", "homepage_mimicry"]:
+        att = attacks.apply_attack(ph, k, seed=0)
+        rows.append([k, round(recall(att, mdl, feat), 3),
+                     round(recall(normalize.normalize_many(att), mdl, feat), 3),
+                     round(recall(att, mdl_db, feat_db), 3)])
+    T3 = pd.DataFrame(rows, columns=["attack", "recall_attacked",
+                                     "recall_+normalize", "recall_+debias(no https)"])
+    T3.to_csv(config.TABLES / "T3_arms_race.csv", index=False)
+    print(f"  HTTPS artifact: legit {hr[0]:.2f} vs phishing {hr[1]:.2f}")
+    print(T3.to_string(index=False))
+
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    T3.set_index("attack").plot.bar(ax=ax, color=[RED, GREEN, INK], rot=12)
+    ax.set_ylim(0, 1.05); ax.set_ylabel("recall on phishing"); ax.axhline(clean, ls="--", color="grey")
+    ax.set_title("URL obfuscation: structural attacks are harmless, but the HTTPS artifact is exploitable")
+    ax.legend(fontsize=8); fig.tight_layout()
+    fig.savefig(config.FIGURES / "F3_arms_race.png"); plt.close(fig)
+
+
+# --------------------------------------- Phase 4: cross-dataset generalization (live data)
+def phase4(df, F, tr, te):
+    print("Phase 4: does the score survive a different, live dataset?")
+    feat = features.FEATURE_NAMES
+    mdl = models.model_zoo()["hist_gbm"].fit(X(F, tr, feat), tr["label"].values)
+
+    # in-distribution reference
+    p_id = mdl.predict_proba(X(F, te, feat))[:, 1]
+    m_id = stats.metrics(te["label"].values, p_id)
+
+    # out-of-distribution: live OpenPhish phishing + Majestic legit (different collection)
+    oph = pd.read_csv(config.DATA_RAW / "openphish.csv")
+    maj = pd.read_csv(config.DATA_RAW / "majestic_top.csv").sample(2 * len(oph), random_state=config.SEED)
+    ood = pd.concat([oph, maj], ignore_index=True)
+    Food = features.extract_frame(ood["URL"])[feat]
+    p_ood = mdl.predict_proba(Food)[:, 1]
+    y_ood = ood["label"].values
+    m_ood = stats.metrics(y_ood, p_ood)
+    rec_openphish = float((p_ood[y_ood == 1] >= 0.5).mean())
+
+    # diagnosis: is it ranking (AUC) or just the threshold?
+    best_t, _ = stats.cost_optimal_threshold(y_ood, p_ood, 1, 1)
+    m_ood_rethr = stats.metrics(y_ood, p_ood, best_t)
+
+    T4 = pd.DataFrame([
+        ["in-distribution (PhiUSIIL test)", round(m_id["f1"], 3), round(m_id["recall"], 3), round(m_id["auc"], 3), 0.5],
+        ["out-of-distribution (OpenPhish+Majestic)", round(m_ood["f1"], 3), round(rec_openphish, 3), round(m_ood["auc"], 3), 0.5],
+        ["  same, re-thresholded", round(m_ood_rethr["f1"], 3), round(m_ood_rethr["recall"], 3), round(m_ood["auc"], 3), round(best_t, 2)],
+    ], columns=["setting", "f1", "recall_phishing", "auc", "threshold"])
+    T4.to_csv(config.TABLES / "T4_cross_dataset.csv", index=False)
+    print(f"  recall on live OpenPhish phishing: {rec_openphish:.3f}  (in-dist recall {m_id['recall']:.3f})")
+    print(T4.to_string(index=False))
+
+    fig, ax = plt.subplots(figsize=(7.5, 4))
+    ax.hist(p_ood[y_ood == 1], bins=30, alpha=.6, color=RED, label="live phishing (OpenPhish)")
+    ax.hist(p_ood[y_ood == 0], bins=30, alpha=.6, color=GREEN, label="legit (Majestic)")
+    ax.axvline(0.5, ls="--", color="grey"); ax.set_xlabel("P(phishing)"); ax.set_title("Score distribution on live modern data")
+    ax.legend(); fig.tight_layout(); fig.savefig(config.FIGURES / "F4_cross_dataset.png"); plt.close(fig)
+
+
 if __name__ == "__main__":
     t0 = time.time()
     df, F, provided, tr, va, te = prepare()
     phase1(df, F, provided, tr, va, te)
+    phase3(df, F, tr, te)
+    phase4(df, F, tr, te)
     print(f"done in {time.time()-t0:.0f}s")

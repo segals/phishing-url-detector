@@ -1,0 +1,4 @@
+setting,f1,recall_phishing,auc,threshold
+in-distribution (PhiUSIIL test),0.997,0.994,0.999,0.5
+out-of-distribution (OpenPhish+Majestic),0.517,1.0,0.959,0.5
+"  same, re-thresholded",0.528,1.0,0.959,0.99

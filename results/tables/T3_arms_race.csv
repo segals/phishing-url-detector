@@ -1,0 +1,6 @@
+attack,recall_attacked,recall_+normalize,recall_+debias(no https)
+(clean),0.994,0.994,0.994
+homoglyph,0.992,0.994,0.994
+typosquat,0.993,0.993,0.994
+https_upgrade,0.672,0.672,0.704
+homepage_mimicry,0.0,0.0,0.0
