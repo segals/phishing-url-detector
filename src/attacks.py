@@ -42,12 +42,14 @@ def attack_homoglyph(url, rng, rate=0.6):
 
 def attack_typosquat(url, rng, **_):
     """Insert/duplicate a character in the registered domain label (paypa1 / paypall)."""
-    p = _parts(url); host = p.hostname or ""
+    p = _parts(url)
+    host = p.hostname or ""
     labels = host.split(".")
     if len(labels) >= 2:
         core = list(labels[-2])
         if core:
-            i = rng.integers(0, len(core)); core.insert(i, core[i])
+            i = rng.integers(0, len(core))
+            core.insert(i, core[i])
             labels[-2] = "".join(core)
     return urlunparse(p._replace(netloc=".".join(labels)))
 

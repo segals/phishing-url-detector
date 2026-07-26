@@ -1,7 +1,8 @@
 """Fetch the primary dataset (PhiUSIIL, UCI id=967) to a local CSV.
 Prasad, A. & Chandra, S. (2024), Computers & Security. UCI ML Repository.
 """
-import os, hashlib, pandas as pd
+import os
+import hashlib
 from ucimlrepo import fetch_ucirepo
 
 os.makedirs("data/raw", exist_ok=True)

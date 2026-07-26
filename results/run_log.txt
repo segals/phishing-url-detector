@@ -1,4 +1,4 @@
-  built 40 URL features for 235370 rows in 230s
+  built 40 URL features for 235370 rows in 225s
 Phase 1: where the near-perfect score comes from
   T0: 1.0 (all) / 0.9953 (1 feature) / 0.9967 (honest lexical)
   T2 best model: random_forest
@@ -32,4 +32,4 @@ Phase 8: probability calibration (Brier + reliability curve)
 Phase 9: feature-group ablation
 Phase 10: error analysis
   false positives 15, false negatives 119 of 47074
-done in 1335s
+done in 1509s

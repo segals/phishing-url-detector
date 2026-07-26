@@ -10,10 +10,10 @@ import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
-from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Image, Table,
-                                TableStyle, HRFlowable, KeepTogether, PageBreak)
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Image, Table,
+                                TableStyle, HRFlowable, KeepTogether)
 from reportlab.platypus.tableofcontents import TableOfContents
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_JUSTIFY, TA_CENTER
 
 TAB, FIG = "results/tables", "results/figures"
@@ -29,18 +29,29 @@ AUTHOR = "Gilad Segal"
 COURSE = "Data Science &amp; Cyber — Dr. Uri Itai"
 REPO = "github.com/segals/phishing-url-detector"
 
-TITLE = ParagraphStyle("TITLE", fontName="Times-Bold", fontSize=19, textColor=INK, leading=23, spaceAfter=4, alignment=TA_LEFT)
-SUBTITLE = ParagraphStyle("SUBTITLE", fontName="Times-Italic", fontSize=12.5, textColor=SLATE, leading=16, spaceAfter=9)
-META = ParagraphStyle("META", fontName="Times-Roman", fontSize=9.3, textColor=GREY, leading=12.5, spaceAfter=2)
+TITLE = ParagraphStyle("TITLE", fontName="Times-Bold", fontSize=19, textColor=INK, leading=23,
+                       spaceAfter=4, alignment=TA_LEFT)
+SUBTITLE = ParagraphStyle("SUBTITLE", fontName="Times-Italic", fontSize=12.5, textColor=SLATE, leading=16,
+                          spaceAfter=9)
+META = ParagraphStyle("META", fontName="Times-Roman", fontSize=9.3, textColor=GREY, leading=12.5,
+                      spaceAfter=2)
 AUTH = ParagraphStyle("AUTH", fontName="Times-Bold", fontSize=11, textColor=INK, leading=14, spaceAfter=2)
-ABSTRACT_H = ParagraphStyle("ABSTRACT_H", fontName="Times-Bold", fontSize=10.3, textColor=INK, spaceBefore=8, spaceAfter=3)
-ABSTRACT = ParagraphStyle("ABSTRACT", fontName="Times-Roman", fontSize=9.4, textColor=colors.HexColor("#222"), leading=12.9, alignment=TA_JUSTIFY)
-H1 = ParagraphStyle("H1", fontName="Times-Bold", fontSize=12.4, textColor=INK, spaceBefore=11, spaceAfter=5, leading=15)
-H2 = ParagraphStyle("H2", fontName="Times-Bold", fontSize=10.4, textColor=SLATE, spaceBefore=7.5, spaceAfter=3, leading=12.5)
-BODY = ParagraphStyle("BODY", fontName="Times-Roman", fontSize=9.6, textColor=colors.HexColor("#1b1f27"), leading=13.4, spaceAfter=5, alignment=TA_JUSTIFY)
-CAP = ParagraphStyle("CAP", fontName="Times-Italic", fontSize=8.4, textColor=GREY, alignment=TA_CENTER, spaceBefore=2.5, spaceAfter=8, leading=10.5)
-REF = ParagraphStyle("REF", fontName="Times-Roman", fontSize=8.8, textColor=colors.HexColor("#1b1f27"), leading=12, spaceAfter=4, leftIndent=14, firstLineIndent=-14)
-TOC_H = ParagraphStyle("TOC_H", fontName="Times-Bold", fontSize=12.4, textColor=INK, spaceBefore=10, spaceAfter=6, leading=15)
+ABSTRACT_H = ParagraphStyle("ABSTRACT_H", fontName="Times-Bold", fontSize=10.3, textColor=INK,
+                            spaceBefore=8, spaceAfter=3)
+ABSTRACT = ParagraphStyle("ABSTRACT", fontName="Times-Roman", fontSize=9.4,
+                          textColor=colors.HexColor("#222"), leading=12.9, alignment=TA_JUSTIFY)
+H1 = ParagraphStyle("H1", fontName="Times-Bold", fontSize=12.4, textColor=INK, spaceBefore=11,
+                    spaceAfter=5, leading=15)
+H2 = ParagraphStyle("H2", fontName="Times-Bold", fontSize=10.4, textColor=SLATE, spaceBefore=7.5,
+                    spaceAfter=3, leading=12.5)
+BODY = ParagraphStyle("BODY", fontName="Times-Roman", fontSize=9.6, textColor=colors.HexColor("#1b1f27"),
+                      leading=13.4, spaceAfter=5, alignment=TA_JUSTIFY)
+CAP = ParagraphStyle("CAP", fontName="Times-Italic", fontSize=8.4, textColor=GREY, alignment=TA_CENTER,
+                     spaceBefore=2.5, spaceAfter=8, leading=10.5)
+REF = ParagraphStyle("REF", fontName="Times-Roman", fontSize=8.8, textColor=colors.HexColor("#1b1f27"),
+                     leading=12, spaceAfter=4, leftIndent=14, firstLineIndent=-14)
+TOC_H = ParagraphStyle("TOC_H", fontName="Times-Bold", fontSize=12.4, textColor=INK, spaceBefore=10,
+                       spaceAfter=6, leading=15)
 
 
 def val(tab, col, contains, valcol):
@@ -50,10 +61,12 @@ def val(tab, col, contains, valcol):
 
 
 story = []
-_tab_n = [0]; _fig_n = [0]
+_tab_n = [0]
+_fig_n = [0]
 
 
-def P(t, style=BODY): story.append(Paragraph(t, style))
+def P(t, style=BODY):
+    story.append(Paragraph(t, style))
 
 
 _sec_n = [0]
@@ -97,8 +110,10 @@ def table_from_csv(name, caption, ncols=None, nrows=None, col_widths=None, fonts
     d = pd.read_csv(f"{TAB}/{name}.csv")
     if d.columns[0].startswith("Unnamed"):
         d = d.rename(columns={d.columns[0]: "feature"})
-    if ncols: d = d.iloc[:, :ncols]
-    if nrows: d = d.head(nrows)
+    if ncols:
+        d = d.iloc[:, :ncols]
+    if nrows:
+        d = d.head(nrows)
     rows = d.round(3).astype(str).values.tolist()
     if wrap_col is not None:
         cs = ParagraphStyle("cell", fontName="Helvetica", fontSize=fontsize - 0.4, leading=fontsize + 1.3)
@@ -126,9 +141,11 @@ def figure(name, caption, width=13.5*cm, height=None):
 
 def footer(canvas, doc):
     canvas.saveState()
-    canvas.setStrokeColor(GRID); canvas.setLineWidth(0.5)
+    canvas.setStrokeColor(GRID)
+    canvas.setLineWidth(0.5)
     canvas.line(2.2*cm, 1.5*cm, A4[0]-2.2*cm, 1.5*cm)
-    canvas.setFont("Times-Roman", 8); canvas.setFillColor(GREY)
+    canvas.setFont("Times-Roman", 8)
+    canvas.setFillColor(GREY)
     canvas.drawString(2.2*cm, 1.12*cm, "Catching Phishing from the Link Alone")
     canvas.drawRightString(A4[0]-2.2*cm, 1.12*cm, f"{doc.page}")
     canvas.restoreState()
@@ -394,7 +411,8 @@ P("Training on all 50 provided numeric features reproduces the near-perfect lite
   "features of Section&nbsp;4.1.")
 table_from_csv("T0_artifact_decomposition",
                "Decomposing the near-perfect score: all provided features, individual provided features, "
-               "and our leakage-free lexical features. Bootstrap 95% CIs shown where a full model was fitted.",
+               "and our leakage-free lexical features. Bootstrap 95% CIs shown where a full model "
+               "was fitted.",
                col_widths=[7.4*cm, 1.7*cm, 1.7*cm, 3*cm])
 P("The more interesting result is the last row: our leakage-free features still attain "
   "F1&nbsp;=&nbsp;0.997. This is not leakage but a deeper problem. As Table&nbsp;5 shows, every "
@@ -420,7 +438,8 @@ P("Table&nbsp;7 compares Pearson (linear) and Spearman (monotone) correlation wi
   "(r&nbsp;=&nbsp;&rho;&nbsp;=&nbsp;&minus;0.61), consistent with Section&nbsp;5.2. Figure&nbsp;2 shows "
   "the correlation structure among leading features: the path- and length-related features form a "
   "strongly inter-correlated block, which matters for interpreting the ablation in Section&nbsp;5.6.")
-table_from_csv("T7_correlation", "Feature&ndash;label correlation, Pearson versus Spearman (top 10 by |Spearman|).",
+table_from_csv("T7_correlation",
+               "Feature&ndash;label correlation, Pearson versus Spearman (top 10 by |Spearman|).",
                nrows=10, col_widths=[4.6*cm, 3.2*cm, 3.2*cm])
 figure("F6_correlation", "Spearman correlation among leading features. Length- and path-related features "
                          "form a correlated block, encoding substantially overlapping information.",
@@ -444,7 +463,8 @@ P("Table&nbsp;9 compares the three classifiers on the 40-feature representation.
   "reproducible, not an artifact of a fortunate split. The tree ensemble is the reference detector "
   "throughout.")
 table_from_csv("T2_model_comparison",
-               "Model comparison with bootstrap 95% confidence intervals and McNemar tests against the best model.",
+               "Model comparison with bootstrap 95% confidence intervals and McNemar tests against "
+               "the best model.",
                fontsize=7.1, col_widths=[2.4*cm, 1.9*cm, 1.9*cm, 1.9*cm, 1.6*cm, 1.9*cm, 1.9*cm, 1.9*cm])
 
 H2f("5.5 Explainability")
@@ -514,7 +534,8 @@ P("Calibration was assessed with the Brier score (mean squared error between pre
   "the sparsely populated middle of the range: the model is confidently correct at both extremes, where "
   "almost all predictions fall, and noisier between. Section&nbsp;5.9 shows this calibration does not "
   "survive a change of dataset.")
-table_from_csv("T11_calibration", "Reliability table: observed phishing frequency per predicted-probability bin.",
+table_from_csv("T11_calibration",
+               "Reliability table: observed phishing frequency per predicted-probability bin.",
                col_widths=[5*cm, 5*cm])
 figure("F8_calibration", "Reliability curve. Points on the diagonal indicate well-calibrated probabilities; "
                          "the bulk of predictions lie at the two extremes.", width=8.0*cm, height=8.0*cm)
@@ -557,7 +578,8 @@ P("Table&nbsp;16 ranks features by distributional distance between the PhiUSIIL 
   "diagnostics — feature attribution and distributional distance — converging on the same small feature "
   "set is strong evidence for this causal account.")
 table_from_csv("T9_domain_shift",
-               "Distributional shift between PhiUSIIL and the independent corpus, by Kolmogorov&ndash;Smirnov "
+               "Distributional shift between PhiUSIIL and the independent corpus, by "
+               "Kolmogorov&ndash;Smirnov "
                "statistic and normalised Wasserstein distance (top 8 features).",
                nrows=8, col_widths=[4.2*cm, 3.2*cm, 3.2*cm])
 figure("F7_domain_shift", "Kolmogorov&ndash;Smirnov distance per feature between the two datasets. The "
@@ -681,7 +703,8 @@ os.makedirs("report", exist_ok=True)
 OUT = os.environ.get("REPORT_OUT", "report/report.pdf")   # override if the PDF is open in a viewer
 doc = ReportDoc(OUT, pagesize=A4, leftMargin=2.2*cm, rightMargin=2.2*cm,
                 topMargin=2*cm, bottomMargin=2.0*cm,
-                title="Catching Phishing from the Link Alone: A Critical Evaluation of URL-Based Phishing Detection",
+                title=("Catching Phishing from the Link Alone: "
+                       "A Critical Evaluation of URL-Based Phishing Detection"),
                 author=AUTHOR)
 doc.multiBuild(story, onFirstPage=footer, onLaterPages=footer)
 print(f"wrote {OUT}  ({_tab_n[0]} tables, {_fig_n[0]} figures)")

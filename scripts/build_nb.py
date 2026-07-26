@@ -30,13 +30,28 @@ Every number below is produced by `run_all.py` (deterministic, seed 42) and relo
 """))
 
 c.append(code(r"""
-import sys, pandas as pd, numpy as np, matplotlib.pyplot as plt
+import sys
+
+import numpy as np
+import pandas as pd
 from IPython.display import Image, display
+
 sys.path.insert(0, "..")            # import the project's src package
-from src import data, features, stats, attacks, normalize
+from src import attacks, data, features
+
 pd.set_option("display.max_colwidth", 70)
-T = lambda name: pd.read_csv(f"../results/tables/{name}.csv")
-F = lambda name: display(Image(f"../results/figures/{name}.png"))
+
+
+def T(name):
+    # load a result table
+    return pd.read_csv(f"../results/tables/{name}.csv")
+
+
+def F(name):
+    # show a result figure
+    display(Image(f"../results/figures/{name}.png"))
+
+
 print("helpers ready")
 """))
 
@@ -114,9 +129,12 @@ tests.* URL features are heavy-tailed, so I lead with Spearman (monotone) and me
 and I test class differences with the non-parametric **Mann–Whitney U**.
 """))
 c.append(code("""
-print("distribution shape (skewness / excess kurtosis):"); display(T("T6_eda_shape"))
-print("correlation with the label (Pearson vs Spearman):"); display(T("T7_correlation"))
-print("Mann-Whitney U — do the classes differ?"); display(T("T8_mannwhitney"))
+print("distribution shape (skewness / excess kurtosis):")
+display(T("T6_eda_shape"))
+print("correlation with the label (Pearson vs Spearman):")
+display(T("T7_correlation"))
+print("Mann-Whitney U — do the classes differ?")
+display(T("T8_mannwhitney"))
 F("F6_correlation")
 """))
 c.append(md(r"""
@@ -134,7 +152,8 @@ metric gets a **bootstrap 95% CI**, and every pairwise comparison a **McNemar te
 and **F2** (a missed phishing costs more than a false alarm), not just accuracy.
 """))
 c.append(code('display(T("T2_model_comparison"))'))
-c.append(md("The models are statistically indistinguishable and all near-perfect — again, because the task is artificially easy in-distribution."))
+c.append(md("The models are statistically indistinguishable and all near-perfect — again, "
+            "because the task is artificially easy in-distribution."))
 
 c.append(md(r"""
 ## 6. What is the model actually using? (SHAP)
@@ -142,7 +161,10 @@ c.append(md(r"""
 *Course link — explainability.* Tree models aren't linear, so I use **SHAP** (Lundberg & Lee, 2017) for
 faithful per-feature attribution.
 """))
-c.append(code('display(T("T5_shap_importance").head(8)); F("F5_shap")'))
+c.append(code("""
+display(T("T5_shap_importance").head(8))
+F("F5_shap")
+"""))
 c.append(md(r"""
 The #1 driver is **`is_https`** by a factor of ~3, followed by path/structure features. The model is a
 thin veneer over the collection artifact — which is precisely why the attacks in the next section work.
@@ -189,8 +211,12 @@ c.append(md(r"""
 
 *Course link — goodness of fit / calibration.*
 """))
-c.append(code('display(T("T11_calibration")); F("F8_calibration")'))
-c.append(md("In-distribution the model is very well calibrated (low Brier) — but as the next section shows, that calibration does **not** survive a change of dataset."))
+c.append(code("""
+display(T("T11_calibration"))
+F("F8_calibration")
+"""))
+c.append(md("In-distribution the model is very well calibrated (low Brier) — but as the next "
+            "section shows, that calibration does **not** survive a change of dataset."))
 
 c.append(md(r"""
 ## 10. The reality check — cross-dataset generalization
@@ -199,7 +225,10 @@ c.append(md(r"""
 does the score survive a **different** dataset? I test on the independent **Kaggle Malicious-URLs** set
 (Siddhartha 2021, 651k URLs; phishing vs. benign), and on the **live OpenPhish** feed.
 """))
-c.append(code('display(T("T4_cross_dataset")); F("F4_cross_dataset")'))
+c.append(code("""
+display(T("T4_cross_dataset"))
+F("F4_cross_dataset")
+"""))
 c.append(md(r"""
 The near-perfect model (in-dist F1 0.997, AUC 0.999) collapses to **F1 0.67 / AUC 0.43 — worse than
 random**. The boxplot shows why: in-distribution the two classes are cleanly separated (legit near 0,
@@ -212,7 +241,10 @@ tell the classes apart at all). AUC < 0.5 means that within that saturated band,
 *Why* does it invert? Distance metrics make it concrete — the most-shifted features between the two
 datasets are exactly the ones the model relies on:
 """))
-c.append(code('display(T("T9_domain_shift").head(8)); F("F7_domain_shift")'))
+c.append(code("""
+display(T("T9_domain_shift").head(8))
+F("F7_domain_shift")
+"""))
 c.append(md(r"""
 `is_https`, `path_len`, `n_subdomain` — the top SHAP drivers — are also the top KS-shifted features. The
 model built its decision on the least transferable signals. This is the URL analogue of my partner's
@@ -223,8 +255,10 @@ c.append(md(r"""
 ## 11. Feature ablation and error analysis
 """))
 c.append(code("""
-print("which feature groups carry the (in-distribution) signal:"); display(T("T12_ablation"))
-print("errors on the clean test set:"); display(T("T13_error_counts"))
+print("which feature groups carry the (in-distribution) signal:")
+display(T("T12_ablation"))
+print("errors on the clean test set:")
+display(T("T13_error_counts"))
 display(T("T13b_error_examples"))
 """))
 c.append(md(r"""
@@ -277,7 +311,8 @@ Majestic Million; Ma et al. 2009; Garera et al. 2007; Sahingoz et al. 2019; Le e
 Boucher et al. 2022 (Bad Characters); Lundberg & Lee 2017 (SHAP); Unicode TR39 (confusables).
 """))
 
-nb = nbf.v4.new_notebook(); nb.cells = c
+nb = nbf.v4.new_notebook()
+nb.cells = c
 nb.metadata = {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
                "language_info": {"name": "python", "version": "3.10"}}
 nbf.write(nb, "notebooks/url_detector.ipynb")

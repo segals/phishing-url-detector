@@ -4,12 +4,17 @@
 An independent, mixed-class source (different from PhiUSIIL) -> a confound-free
 generalization test. Uses the new Kaggle Bearer token at ~/.kaggle/access_token.
 """
-import os, ssl, urllib.request, zipfile
+import os
+import ssl
+import urllib.request
+import zipfile
 
 OUT = "data/raw/malicious_urls"
 os.makedirs(OUT, exist_ok=True)
 tok = open(os.path.expanduser("~/.kaggle/access_token")).read().strip()
-ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
 url = "https://www.kaggle.com/api/v1/datasets/download/sid321axn/malicious-urls-dataset"
 req = urllib.request.Request(url, headers={"Authorization": f"Bearer {tok}",
                                            "User-Agent": "Mozilla/5.0"})

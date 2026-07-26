@@ -3,11 +3,19 @@
  - legitimate: Majestic Million top domains (reputable ranking).  https://majestic.com
 Both are public, no login.
 """
-import os, ssl, io, urllib.request, pandas as pd
+import os
+import ssl
+import io
+import urllib.request
+import pandas as pd
 os.makedirs("data/raw", exist_ok=True)
-ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+
 def get(url):
-    req=urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     return urllib.request.urlopen(req, context=ctx, timeout=60).read()
 
 # phishing (live)

@@ -1,0 +1,8 @@
+[tool.ruff]
+# PEP 8 with a 110-character limit: the strict 79 forces awkward wrapping of the long
+# descriptive strings (table captions, slide text) that make up much of this project.
+line-length = 110
+extend-exclude = ["scripts/_*.py"]   # untracked scratch probes
+
+[tool.ruff.lint]
+select = ["E", "W", "F"]             # pycodestyle errors/warnings + pyflakes

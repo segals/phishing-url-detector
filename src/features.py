@@ -9,9 +9,12 @@ brand/obfuscation signals. Brand look-alike uses Levenshtein edit distance to a 
 list of frequently-impersonated brands (Ma et al. 2009; Garera et al. 2007).
 """
 from __future__ import annotations
-import math, re
+import math
+import re
 from collections import Counter
 from urllib.parse import urlparse
+
+import pandas as pd
 
 # Frequently impersonated brands (for the look-alike / typo-squat feature).
 BRANDS = ["paypal", "apple", "microsoft", "amazon", "google", "facebook", "netflix",
@@ -62,7 +65,7 @@ def _brand_min_distance(host: str) -> int:
     0 = brand present exactly (could be the real site or a sub-domain trick);
     1-2 = classic typo-squat / look-alike (paypa1, arnazon); large = unrelated.
     """
-    labels = [l for l in host.split(".") if l]
+    labels = [part for part in host.split(".") if part]
     best = 99
     for label in labels:
         for brand in BRANDS:
@@ -82,7 +85,7 @@ def extract(url: str) -> dict:
         scheme, port = parsed.scheme, parsed.port
     except ValueError:
         host, path, query, scheme, port = "", "", "", "", None
-    labels = [l for l in host.split(".") if l]
+    labels = [part for part in host.split(".") if part]
     tld = labels[-1] if labels else ""
     core = labels[-2] if len(labels) >= 2 else ""
     brand_dist = _brand_min_distance(host)
@@ -143,8 +146,11 @@ FEATURE_NAMES = list(extract("http://example.com").keys())
 
 
 def extract_frame(urls):
-    """Vectorized: list/Series of URLs -> DataFrame of features."""
-    import pandas as pd
+    """Build a feature DataFrame from a list/Series of URLs.
+
+    The comprehension is unavoidable: every feature comes from parsing an individual
+    URL string, which pandas cannot vectorise.
+    """
     return pd.DataFrame([extract(u) for u in urls], columns=FEATURE_NAMES)
 
 
