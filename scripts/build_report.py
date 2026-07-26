@@ -56,8 +56,15 @@ _tab_n = [0]; _fig_n = [0]
 def P(t, style=BODY): story.append(Paragraph(t, style))
 
 
+_sec_n = [0]
+
+
 def H(t):
-    p = Paragraph(t, H1); p.toc_level = 0
+    """Top-level heading: recorded in the TOC and given a bookmark so the TOC entry links to it."""
+    _sec_n[0] += 1
+    p = Paragraph(t, H1)
+    p.toc_level = 0
+    p.bookmark_key = f"sec{_sec_n[0]}"
     story.append(p)
 
 
@@ -128,10 +135,23 @@ def footer(canvas, doc):
 
 
 class ReportDoc(SimpleDocTemplate):
-    """Notifies the TableOfContents of every heading, so page numbers are real."""
+    """Notifies the TableOfContents of every heading.
+
+    Passing a 4th element (a bookmark key) makes ReportLab render each TOC entry as an
+    internal hyperlink; we register the matching destination here so clicking an entry
+    jumps to that heading. The same keys also populate the PDF outline (the reader's
+    bookmarks sidebar).
+    """
     def afterFlowable(self, flowable):
         if isinstance(flowable, Paragraph) and hasattr(flowable, "toc_level"):
-            self.notify("TOCEntry", (flowable.toc_level, flowable.getPlainText(), self.page))
+            text = flowable.getPlainText()
+            key = flowable.bookmark_key
+            try:                                   # land on the heading itself...
+                self.canv.bookmarkHorizontalAbsolute(key, self.frame._y + flowable.height)
+            except Exception:                      # ...falling back to the page
+                self.canv.bookmarkPage(key)
+            self.canv.addOutlineEntry(text, key, level=flowable.toc_level, closed=False)
+            self.notify("TOCEntry", (flowable.toc_level, text, self.page, key))
 
 
 # =====================================================================
@@ -658,9 +678,10 @@ for i, r in enumerate(refs, 1):
     story.append(Paragraph(f"[{i}]&nbsp;&nbsp;{r}", REF))
 
 os.makedirs("report", exist_ok=True)
-doc = ReportDoc("report/report.pdf", pagesize=A4, leftMargin=2.2*cm, rightMargin=2.2*cm,
+OUT = os.environ.get("REPORT_OUT", "report/report.pdf")   # override if the PDF is open in a viewer
+doc = ReportDoc(OUT, pagesize=A4, leftMargin=2.2*cm, rightMargin=2.2*cm,
                 topMargin=2*cm, bottomMargin=2.0*cm,
                 title="Catching Phishing from the Link Alone: A Critical Evaluation of URL-Based Phishing Detection",
                 author=AUTHOR)
 doc.multiBuild(story, onFirstPage=footer, onLaterPages=footer)
-print(f"wrote report/report.pdf  ({_tab_n[0]} tables, {_fig_n[0]} figures)")
+print(f"wrote {OUT}  ({_tab_n[0]} tables, {_fig_n[0]} figures)")

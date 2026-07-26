@@ -11,3 +11,4 @@ data/processed/
 # scratch
 scripts/_*.py
 ~$*
+report/_verify.pdf
