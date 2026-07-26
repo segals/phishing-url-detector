@@ -239,10 +239,11 @@ notes(s, "[COURSE: the accuracy paradox.] This is the model you 'got' in the fir
 # =====================================================================
 s = slide()
 header(s, "Discovery 1 — the score is a collection artifact", tag="DISCOVERY 1")
-https_legit = val("T3a_https_artifact", "class", "legitimate", "https_rate")
-https_phish = val("T3a_https_artifact", "class", "phishing", "https_rate")
+# format as percentages: a raw "0.486" reads like a CSV dump on a slide
+https_legit = f'{float(val("T3a_https_artifact", "class", "legitimate", "https_rate")):.0%}'
+https_phish = f'{float(val("T3a_https_artifact", "class", "phishing", "https_rate")):.0%}'
 bullets(s, [f"Legitimate URLs in PhiUSIIL: {https_legit} HTTPS.   "
-            f"Phishing: {https_phish} HTTPS.",
+            f"Phishing: only {https_phish}.",
             "So the model largely learns ‘HTTP = phishing’ — a fact about how the data was collected,",
             "  NOT about phishing (real modern phishing is mostly HTTPS — this rule is backwards!)",
             "Legit URLs here are clean home-pages; phishing are messy deep links.",
