@@ -650,7 +650,7 @@ H("References")
 refs = [
  "Prasad, A. &amp; Chandra, S. (2024). PhiUSIIL: A diverse security profile empowered phishing URL "
  "detection framework based on similarity index and incremental learning. <i>Computers &amp; "
- "Security</i>, 136. Dataset: UCI Machine Learning Repository, id 967.",
+ "Security</i>, 136, 103545. Dataset: UCI Machine Learning Repository, id 967.",
  "Siddhartha, M. (2021). <i>Malicious URLs Dataset</i> (651,191 URLs). Kaggle.",
  "OpenPhish. <i>Community phishing feed</i>. https://openphish.com (snapshot retrieved 2026).",
  "Ma, J., Saul, L. K., Savage, S., &amp; Voelker, G. M. (2009). Beyond blacklists: learning to detect "
