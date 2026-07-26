@@ -55,7 +55,7 @@ python scripts/build_slides.py      # slides     (optional)
 
 ## Deliverables
 
-- **`report/report.pdf`** — the formal submission report (15 pages: abstract, numbered sections,
+- **`report/report.pdf`** — the formal submission report (13 pages: contents, abstract, numbered sections,
   every table and figure with captions and interpretation, references).
 - **`presentation/url_detector.pptx`** — the ~15-minute talk (with speaker notes). This file was
   hand-edited after generation and is the authoritative version; `scripts/build_slides.py` would
