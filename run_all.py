@@ -23,15 +23,18 @@ plt.rcParams.update({"figure.dpi": 120, "axes.grid": True, "grid.alpha": 0.3,
 def prepare():
     """Load PhiUSIIL, clean, build honest URL features (cached), split."""
     df = data.working_set(data.load_phiusiil())
+    # NOTE ON DETERMINISM: a CSV round-trip loses float64 precision in the last bits, and
+    # because tree models split on thresholds those bits can flip a few borderline samples.
+    # To make results identical whether or not the cache already existed, the pipeline
+    # ALWAYS consumes the persisted artifact: we write the cache, then read it back.
     cache = config.DATA_PROC / "url_features.csv"
-    if cache.exists():
-        F = pd.read_csv(cache)
-    else:
+    if not cache.exists():
         t = time.time()
         F = features.extract_frame(df["URL"])
         F.insert(0, "id", df["id"].values)
         F.to_csv(cache, index=False)
         print(f"  built {F.shape[1]-1} URL features for {len(F)} rows in {time.time()-t:.0f}s")
+    F = pd.read_csv(cache)
     F = F.set_index("id")
     provided = [c for c in df.select_dtypes("number").columns if c not in ("label", "id")]
     tr, va, te = data.split(df)
@@ -200,11 +203,10 @@ def phase4(df, F, tr, te):
     k["label"] = (k["type"] == "phishing").astype(int)
     k = k.groupby("label", group_keys=False).sample(n=40000, random_state=config.SEED)
     cache = config.DATA_PROC / "kaggle_features.csv"
-    if cache.exists():
-        Fk = pd.read_csv(cache)
-    else:
+    if not cache.exists():          # always consume the persisted artifact (see prepare())
         Fk = features.extract_frame(k["url"]); Fk["label"] = k["label"].values
         Fk.to_csv(cache, index=False)
+    Fk = pd.read_csv(cache)
     yk = Fk["label"].values
     y_id_arr = te["label"].values   # for the before/after boxplot below
     p_ood = mdl.predict_proba(Fk[feat])[:, 1]
@@ -252,7 +254,8 @@ def phase5(df, F, tr, te):
     feat = features.FEATURE_NAMES
     rf = models.model_zoo()["random_forest"].fit(X(F, tr, feat), tr["label"].values)
     imp, _, _ = explain.shap_importance(rf, X(F, te, feat), max_n=2000)
-    imp.head(15).to_frame("mean_abs_shap").to_csv(config.TABLES / "T5_shap_importance.csv")
+    imp.head(15).to_frame("mean_abs_shap").to_csv(config.TABLES / "T5_shap_importance.csv",
+                                                  index_label="feature")
     print("  top drivers:", list(imp.head(6).index))
 
     fig, ax = plt.subplots(figsize=(7, 5))

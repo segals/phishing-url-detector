@@ -1,3 +1,4 @@
+  built 40 URL features for 235370 rows in 230s
 Phase 1: where the near-perfect score comes from
   T0: 1.0 (all) / 0.9953 (1 feature) / 0.9967 (honest lexical)
   T2 best model: random_forest
@@ -23,10 +24,12 @@ Phase 5: what is the model actually using? (SHAP)
 Phase 6: measuring the domain shift with KS + Wasserstein (course: distance metrics)
   most-shifted features (KS): ['is_https', 'path_len', 'n_path_segments', 'n_subdomain', 'url_len']
 Phase 7: unsupervised anomaly detection (Isolation Forest, LOF)
+C:\Users\gilad\AppData\Local\Programs\Python\Python310\lib\site-packages\sklearn\utils\validation.py:2749: UserWarning: X does not have valid feature names, but LocalOutlierFactor was fitted with feature names
+  warnings.warn(
   unsupervised AUC: {'IsolationForest': 0.828, 'LocalOutlierFactor': 0.944}
 Phase 8: probability calibration (Brier + reliability curve)
   Brier 0.0025
 Phase 9: feature-group ablation
 Phase 10: error analysis
   false positives 15, false negatives 119 of 47074
-done in 795s
+done in 1335s

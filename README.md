@@ -3,9 +3,11 @@
 **A URL-based phishing detector — and an honest audit of why "99% accuracy" in this field is mostly a
 dataset artifact.**
 
-Course project (Data Science & Cyber). This is the **URL / link detector** — one half of a two-part
-system; a partner built the **content / text detector**. This half reads only the URL and decides
-phishing vs. legitimate, then spends most of the effort showing that its near-perfect score is fragile.
+**Gilad Segal** — Data Science & Cyber (Dr. Uri Itai).
+
+This is the **URL / link detector** — one half of a two-part project; a partner built the
+**content / text detector**. This half reads only the URL and decides phishing vs. legitimate, then
+spends most of the effort showing that its near-perfect score is fragile.
 
 ## The story in one line
 
@@ -32,9 +34,11 @@ signal — which is exactly the argument for fusing it with the content channel.
 
 ## Data (all public, all cited)
 
-- **PhiUSIIL** — 235,795 URLs (Prasad & Chandra, 2024; UCI id 967). `scripts/fetch_data.py`.
-- **Kaggle Malicious-URLs** — 651,191 URLs (Siddhartha, 2021). `scripts/fetch_kaggle.py`.
-- **OpenPhish** feed + **Majestic Million** — live modern test. `scripts/fetch_modern.py`.
+- **PhiUSIIL** — 235,795 URLs (Prasad & Chandra, 2024; UCI id 967) — training/testing. `scripts/fetch_data.py`.
+- **Kaggle Malicious-URLs** — 651,191 URLs (Siddhartha, 2021) — the independent cross-dataset test. `scripts/fetch_kaggle.py`.
+- **OpenPhish** live feed — 300 current real phishing URLs. `scripts/fetch_modern.py`
+  (the same script also caches Majestic Million top domains, used only in early exploratory checks —
+  they are not part of any reported result).
 
 ## Reproduce
 
@@ -51,16 +55,19 @@ python scripts/build_slides.py      # slides     (optional)
 
 ## Deliverables
 
+- **`report/report.pdf`** — the formal submission report (15 pages: abstract, numbered sections,
+  every table and figure with captions and interpretation, references).
+- **`presentation/url_detector.pptx`** — the ~15-minute talk (with speaker notes). This file was
+  hand-edited after generation and is the authoritative version; `scripts/build_slides.py` would
+  overwrite it.
 - **`notebooks/url_detector.ipynb`** — the end-to-end story with code, tables, figures, interpretation.
-- **`report/report.pdf`** — the formal submission report (~10 pages: abstract, numbered sections, figures/tables with captions, references).
-- **`presentation/url_detector.pptx`** — the ~20-minute talk.
 
 ## Layout
 
 ```
 src/       data · features (40 URL features) · models · stats (CIs/McNemar/cost) · attacks · normalize · explain (SHAP)
 run_all.py 10 phases: artifact → EDA → arms race → cross-dataset → SHAP → distance-metrics → anomaly → calibration → ablation → error
-results/   tables/ (T0..T13) and figures/ (F1..F8)
+results/   tables/ (17 CSVs, T0..T13b + data_hash.txt) and figures/ (F1..F8) — all used in the report
 scripts/   data fetchers + the notebook/report/slide builders
 ```
 
@@ -79,5 +86,5 @@ The cross-dataset comparison is affected by differing URL encodings; the no-`is_
 confirming the bias is diffuse. Next steps: WHOIS/domain-age and redirect-chain features, a live-feed
 retraining loop, and **fusion** with the content detector (out of scope for this half).
 
-*References: Ma 2009; Garera 2007; Sahingoz 2019; Le 2018 (URLNet); Boucher 2022; Lundberg & Lee 2017
-(SHAP); Unicode TR39.*
+*References: Prasad & Chandra 2024 (PhiUSIIL); Siddhartha 2021 (Kaggle Malicious-URLs); OpenPhish;
+Ma et al. 2009; Le et al. 2018 (URLNet); Boucher et al. 2022; Lundberg & Lee 2017 (SHAP).*
